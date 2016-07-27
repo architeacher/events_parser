@@ -1,0 +1,16 @@
+{
+  "servers" : {
+    "base": {
+      "host": "localhost",
+      "method": "GET",
+      "port": 8090,
+      "path": "/server"
+    },
+    "analytics": {
+      "host": "localhost",
+      "method": "GET",
+      "port": 8095,
+      "path": "/analytics"
+    }
+  }
+}
