@@ -7,14 +7,14 @@ import (
 )
 
 type Protocol struct {
-	client *http.Client
+	client *http.Transport
 }
 
-func NewProtocol(client *http.Client) *Protocol {
+func NewProtocol(client *http.Transport) *Protocol {
 	return &Protocol{client}
 }
 
-func (self *Protocol) Client() *http.Client {
+func (self *Protocol) Client() *http.Transport {
 	return self.client
 }
 
@@ -32,17 +32,17 @@ func (self *Protocol) Send(req *communication.Request) (*communication.Response,
 		bytes.NewBuffer(httpRequest.Body()),
 	)
 
+	if err != nil {
+		return nil, err
+	}
+
 	// Setting headers
 	for key, value := range req.Meta() {
 
 		nativeRequest.Header.Add(key, value)
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
-	nativeResponse, err := self.Client().Do(nativeRequest)
+	nativeResponse, err := self.Client().RoundTrip(nativeRequest)
 
 	if err != nil {
 		return nil, err

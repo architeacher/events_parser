@@ -15,7 +15,7 @@ func (self *Operator) Operate(data map[string]int) map[string]int {
 	if 0 == len(data) {
 		return data
 	}
-
+	// Todo: modifying operation logic.
 	//data = self.removeDuplicates(data)
 	//data = self.sort(data)
 	return data

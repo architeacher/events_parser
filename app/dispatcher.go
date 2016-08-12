@@ -2,37 +2,37 @@ package app
 
 import (
 	workersLib "splash/queue/workers"
-	"splash/queue/jobs"
 	"splash/services"
+	"splash/processing"
+	"splash/queue/jobs"
 )
 
 type Dispatcher struct {
 	config                     map[string]map[string]string
 	maxWorkers, maxQueuedItems int
 	workersCollection          *workersLib.Collection
-	jobsPool		   *jobs.Pool
+	workersPool                *workersLib.Pool
 }
 
 func NewDispatcher(maxWorkers, maxQueuedItems int, config map[string]map[string]string) *Dispatcher {
 
 	workers := make([]*workersLib.Worker, maxWorkers)
 	jobsRequestsPool := make(chan chan jobs.Job, maxWorkers)
-	jobRequest := make(chan jobs.Job)
 
-	jobsPool := jobs.NewPool(jobsRequestsPool, jobRequest)
+	workersPool := workersLib.NewPool(jobsRequestsPool)
 
 	for index := range workers {
-		workers[index] = workersLib.New(index, jobsPool)
+		workers[index] = workersLib.New(index, make(chan jobs.Job), workersPool, make(chan int))
 	}
 
-	workersCollection := workersLib.NewCollection(workers)
+	workersCollection := workersLib.NewCollection(workers, true)
 
 	return &Dispatcher{
 		config : config,
 		maxWorkers: maxWorkers,
 		maxQueuedItems: maxQueuedItems,
 		workersCollection: workersCollection,
-		jobsPool: jobsPool,
+		workersPool: workersPool,
 	}
 }
 
@@ -50,12 +50,11 @@ func (self *Dispatcher) Run() {
 	go self.dispatch()
 
 	// Launching the server
-	server := NewServer(self.config["base"])
+	server := NewServer(self.config["base"], processing.NewAggregator(), processing.NewOperator())
 	analyticsServer := NewAnalyticsServer(self.config["analytics"])
 
+	go server.Start()
 	go analyticsServer.Start()
-	// Should be last line as it is a blocking.
-	server.Start()
 }
 
 func (self *Dispatcher) dispatch() {
@@ -63,14 +62,15 @@ func (self *Dispatcher) dispatch() {
 	// A new job is received.
 	for job := range jobs.JobsQueue {
 
-		go func() {
+		go func(job jobs.Job) {
 
-			// Blocking till an idle worker is available, then trying to obtain this available worker's job channel.
-			workerChannel := <-self.jobsPool.GetWorkerChannel()
+			// Blocking till an idle worker is available, then trying to obtain this available worker's job channel,
+			// to send a job request on.
+			jobRequest := <-self.workersPool.GetWorkersPoolChannel()
 
 			// Dispatch the job to the worker job channel.
-			workerChannel <- job
-		}()
+			jobRequest <- job
+		}(job)
 
 	}
 

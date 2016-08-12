@@ -6,6 +6,8 @@ import (
 	"splash/client"
 	"splash/communication/protocols/protobuf"
 	"strconv"
+	httpProtocol "splash/communication/protocols/http"
+	"net/http"
 )
 
 func TestShouldBuildPayloadCorrectly (t *testing.T) {
@@ -19,7 +21,7 @@ func TestShouldBuildPayloadCorrectly (t *testing.T) {
 
 	for _, eventData := range data {
 
-		payload, err := client.BuildPayload(eventData)
+		payload, err := client.NewClient(httpProtocol.NewProtocol(&http.Client{})).BuildPayload(eventData)
 		assert.Nil(err)
 
 		time, err := strconv.ParseInt(eventData[0], 10, 0)

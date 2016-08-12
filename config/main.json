@@ -3,8 +3,9 @@
     "base": {
       "host": "localhost",
       "method": "GET",
-      "port": 8090,
-      "path": "/server"
+      "port": ":8090",
+      "path": "/server",
+      "ReadTimeout": 5000
     },
     "analytics": {
       "host": "localhost",

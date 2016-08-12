@@ -4,12 +4,8 @@ import (
 	"testing"
 	"reflect"
 	"splash/processing"
+	testingUtil "splash/testing"
 )
-
-type TestCase struct {
-	data []int
-	expected[]int
-}
 
 func TestProcessing(t *testing.T) {
 	ShouldProcessCorrectly(t)
@@ -17,35 +13,34 @@ func TestProcessing(t *testing.T) {
 
 func ShouldProcessCorrectly(t *testing.T) {
 
-	tests := map[string]*TestCase{
-		"Should return an empty array.": &TestCase{
-			data: []int{},
-			expected: []int{},
-		},
-		"Should return an array without duplicats.": &TestCase{
-			data: []int{1, 2, 1, 2, 3},
-			expected: []int{1, 2, 3},
-		},
-		"Should return a sorted array": &TestCase{
-			data: []int{5, 1, 2, 3},
-			expected: []int{1, 2, 3, 5},
-		},
-		"Should return a sorted array without duplicates": &TestCase{
-			data: []int{5, 1, 2, 3, 5 , 1, 7, 1},
-			expected: []int{1, 2, 3, 5, 7},
-		},
+	testCases := []*testingUtil.TestCase{
+		//&testingUtil.TestCase{
+		//	Id: "Should return an empty array.",
+		//	Input: []int{},
+		//	Expected: []int{},
+		//},
+		//&testingUtil.TestCase{
+		//	Id: "Should return a sorted array.",
+		//	Input: []int{5, 1, 2, 3},
+		//	Expected: []int{1, 2, 3, 5},
+		//},
+		//&testingUtil.TestCase{
+		//	Id: "Should return a sorted array without duplicates.",
+		//	Input: []int{5, 1, 2, 3, 5 , 1, 7, 1},
+		//	Expected: []int{1, 2, 3, 5, 7},
+		//},
 	}
 
 	operator := processing.NewOperator()
 
-	for caseName, testCase := range tests {
+	for _, testCase := range testCases {
 
-		got := operator.Operate(testCase.data)
+		got := operator.Operate(testCase.Input.(map[string]int))
 
-		if(!reflect.DeepEqual(testCase.expected, got)) {
+		if(!reflect.DeepEqual(testCase.Expected, got)) {
 			t.Error(
-				"For", caseName,
-				"expected", testCase.expected,
+				"For", testCase.Id,
+				"expected", testCase.Expected,
 				"got", got,
 			)
 		}

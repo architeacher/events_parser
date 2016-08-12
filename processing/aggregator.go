@@ -1,6 +1,8 @@
 package processing
 
-import "time"
+import (
+	"time"
+)
 
 var (
 	// A buffered channel that we can merge fetched dates on.
@@ -35,6 +37,7 @@ func (*Aggregator) MonitorNewData() {
 			}
 
 			aggregatedData[date]++
+			aggregatedData["total"]++
 		case <-time.After(time.Millisecond * time.Duration(5000)):
 			isMergeDone <- true
 		}

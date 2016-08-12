@@ -8,6 +8,7 @@ import (
 	"splash/client"
 	"os"
 	"splash/communication"
+	"fmt"
 )
 
 func main() {
@@ -23,7 +24,9 @@ func main() {
 
 	go serviceLocator.Stats()
 
-	client := client.NewClient(httpProtocol.NewProtocol(&http.Client{}))
+	client := client.NewClient(httpProtocol.NewProtocol(&http.Transport{
+	}))
+
 	data, err := client.LoadCSVFile(filePath)
 
 	if err != nil {
@@ -33,31 +36,30 @@ func main() {
 
 	clientResponse := make(chan *communication.Response, len(data))
 
+	defer close(clientResponse)
+
 	go func() {
-
-		for _, event := range data {
-
+		for index, event := range data {
 			go func() {
-				err := client.SendData(&event, host, path, &clientResponse)
+				if index == 100 {
+					return
+				}
+				response, err := client.SendData(&event, host, path)
 
 				if err != nil {
-					logger.Error(err.Error())
+					fmt.Println(index, len(event), err.Error())
 				}
 
-				return
+				clientResponse <- response
 			}()
 		}
-
-		return
 	}()
 
 	for response := range clientResponse {
 
 		if response != nil {
 
-			logger.Debug(response.Body())
+			fmt.Println(response.Body())
 		}
 	}
-
-	close(clientResponse)
 }

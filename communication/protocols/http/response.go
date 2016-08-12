@@ -15,6 +15,7 @@ type Response struct {
 }
 
 func NewHttpResponseFromNative(resp *http.Response) (*Response, error) {
+
 	headers := make(map[string]string, 5)
 
 	for key, values := range resp.Header {
@@ -32,7 +33,7 @@ func NewHttpResponseFromNative(resp *http.Response) (*Response, error) {
 
 	bodyAsString := string(body)
 
-	isSuccessful := false
+	var isSuccessful bool
 
 	if (200 == resp.StatusCode) {
 
@@ -40,10 +41,10 @@ func NewHttpResponseFromNative(resp *http.Response) (*Response, error) {
 	}
 
 	return &Response{
-		resp.StatusCode,
-		headers,
-		bodyAsString,
-		communication.NewResponse(
+		statusCode: resp.StatusCode,
+		headers: headers,
+		body: bodyAsString,
+		baseResponse: communication.NewResponse(
 			bodyAsString,
 			headers,
 			isSuccessful,

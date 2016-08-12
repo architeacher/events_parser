@@ -7,6 +7,7 @@ import (
 	"splash/services"
 	"splash/queue/jobs"
 	"splash/communication/protocols/protobuf"
+	"sync"
 )
 
 // Possible worker stats
@@ -17,20 +18,23 @@ const (
 )
 
 type Worker struct {
-	id                int
-	state             chan int
-	jobsPool 	*jobs.Pool
+	id          int
+	state       chan int
+	// A chanel that the worker can receive a work on.
+	jobRequest  chan jobs.Job
+	workersPool *Pool
 }
 
-func New(id int, jobsPool *jobs.Pool) *Worker {
+func New(id int, jobRequest chan jobs.Job, workersPool *Pool, state chan int) *Worker {
 	return &Worker{
 		id: id,
-		state: make(chan int),
-		jobsPool: jobsPool,
+		state: state,
+		jobRequest: jobRequest,
+		workersPool: workersPool,
 	}
 }
 
-func (self *Worker) Start() {
+func (self *Worker) Start(wg sync.WaitGroup) {
 
 	serviceLocator := services.NewLocator()
 	logger := serviceLocator.Logger()
@@ -38,18 +42,22 @@ func (self *Worker) Start() {
 	go self.setState(RUNNING)
 
 	for {
-		// The current worker will register it self the the jobs pool,
-		// by passing in a work request chanel to receive work on it later.
-		self.jobsPool.JobsRequestsPool <- self.jobsPool.JobRequest
+		// The current worker will register it self as an idle, by adding its own job chanel to the jobs pool,
+		// so that it will receive work on this chanel later.
+		self.workersPool.JobsRequestsPool <- self.jobRequest
 
 		select {
 		// A job is received, on the worker's channel, and picked up by the worker.
-		case job := <-self.jobsPool.JobRequest:
+		case job := <-self.jobRequest:
 			time.Sleep(job.GetDelay())
 			err := self.process(&job)
 
 			if err != nil {
-				logger.Error(err.Error())
+				logger.Error("Error processing job:", job.Id(), err.Error())
+			}
+
+			if wg == (sync.WaitGroup{}) {
+				wg.Done()
 			}
 
 		// Workers will stop working after 24 hours, taking a nap :P

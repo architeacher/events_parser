@@ -4,7 +4,6 @@ import (
 	"os"
 	"encoding/csv"
 	"bufio"
-	"io"
 	"strconv"
 	"github.com/golang/protobuf/proto"
 	"splash/communication/protocols/protobuf"
@@ -33,19 +32,23 @@ func (self *Client) LoadCSVFile(path *string) ([][]byte, error){
 	defer file.Close()
 
 	reader := csv.NewReader(bufio.NewReader(file))
+	// Enforce the Reader not to check the number of fields
+	reader.FieldsPerRecord = -1
+
+	rows, err := reader.ReadAll()
+
+	if err != nil {
+		return nil, err
+	}
+
 	payloadCollection := make([]*protobuf.Event_Payload, 0)
 	eventsBuffers := make([][]byte, 0)
 
-	totalRecords, rowsSizes, k := 0, 0, 0
+	totalRecords, rowsSizes,  k := len(rows), 0, 0
 
 	requiredItemsInPayloadCollection := 1
 
-	for {
-		row, err := reader.Read()
-
-		if io.EOF == err {
-			break
-		}
+	for index, row := range rows {
 
 		payload, err := self.BuildPayload(row)
 
@@ -53,7 +56,6 @@ func (self *Client) LoadCSVFile(path *string) ([][]byte, error){
 			return nil, err
 		}
 
-		totalRecords++
 		rowsSizes += self.getRowSize(row)
 
 		k++
@@ -75,8 +77,14 @@ func (self *Client) LoadCSVFile(path *string) ([][]byte, error){
 			payloadCollection = make([]*protobuf.Event_Payload, 0)
 
 			requiredItemsInPayloadCollection++
-			rowsSizes = 0
-			k = 0
+
+			remainingRecords := totalRecords - index - 1
+
+			if requiredItemsInPayloadCollection > remainingRecords{
+				requiredItemsInPayloadCollection = remainingRecords
+			}
+
+			k, rowsSizes = 0, 0
 		}
 	}
 
@@ -157,8 +165,7 @@ func (self *Client) getRowSize(row []string) int {
 	return size
 }
 
-func (self *Client) SendData(data *[]byte, host, path *string, response *chan *communication.Response) (error) {
-
+func (self *Client) SendData(data *[]byte, host, path *string) (*communication.Response, error) {
 
 	request := communication.NewRequest(*data, map[string]string{
 		"method": "Post",
@@ -170,11 +177,9 @@ func (self *Client) SendData(data *[]byte, host, path *string, response *chan *c
 
 	protocolResponse, err := self.protocol.Send(request)
 
-	*response <- protocolResponse
-
 	if err != nil {
-		return err
+		return protocolResponse, err
 	}
 
-	return  nil
+	return protocolResponse, nil
 }

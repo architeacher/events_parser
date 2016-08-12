@@ -1,22 +1,40 @@
 package workers
 
+import "sync"
+
 type Collection struct {
-	workers          []*Worker
-	length           int
+	workers      []*Worker
+	length       int
+	isGrouped    bool
 }
 
-func NewCollection(workers []*Worker) *Collection {
+func NewCollection(workers []*Worker, isGrouped bool) *Collection {
 	return &Collection{
 		workers: workers,
 		length: len(workers),
+		isGrouped: isGrouped,
 	}
 }
 
 func (self *Collection) Start() {
 
+	var wg sync.WaitGroup
+
+	if self.isGrouped {
+		wg = sync.WaitGroup{}
+	}
+
 	for _, worker := range self.workers {
 
-		go worker.Start()
+		if self.isGrouped {
+			wg.Add(1)
+		}
+
+		go worker.Start(wg)
+	}
+
+	if self.isGrouped {
+		wg.Wait()
 	}
 }
 

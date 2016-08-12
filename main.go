@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	MAX_WORKERS = 8
+	MAX_WORKERS = 35
 	MAX_QUEUE = 500
 )
 
