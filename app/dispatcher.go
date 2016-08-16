@@ -2,77 +2,74 @@ package app
 
 import (
 	workersLib "splash/queue/workers"
-	"splash/services"
 	"splash/processing"
 	"splash/queue/jobs"
+	"strconv"
+	"splash/processing/map_reduce"
+)
+
+const (
+	BASE_SERVER = "base"
+	ANALYTICS_SERVER = "analytics"
+	MAX_WORKERS = "maxWorkers"
+	MAX_QUEUED_ITEMS = "maxQueuedItems"
 )
 
 type Dispatcher struct {
 	config                     map[string]map[string]string
 	maxWorkers, maxQueuedItems int
 	workersCollection          *workersLib.Collection
-	workersPool                *workersLib.Pool
 }
 
-func NewDispatcher(maxWorkers, maxQueuedItems int, config map[string]map[string]string) *Dispatcher {
+func NewDispatcher(config map[string]map[string]string) *Dispatcher {
+
+	maxWorkers, _ := strconv.Atoi(config[BASE_SERVER][MAX_WORKERS])
+	maxQueuedItems, _ := strconv.Atoi(config[BASE_SERVER][MAX_QUEUED_ITEMS])
 
 	workers := make([]*workersLib.Worker, maxWorkers)
 	jobsRequestsPool := make(chan chan jobs.Job, maxWorkers)
 
-	workersPool := workersLib.NewPool(jobsRequestsPool)
+	workersPool := workersLib.NewPool(jobsRequestsPool, make(chan interface{}))
 
 	for index := range workers {
 		workers[index] = workersLib.New(index, make(chan jobs.Job), workersPool, make(chan int))
 	}
 
-	workersCollection := workersLib.NewCollection(workers, true)
+	workersCollection := workersLib.NewCollection(workers, workersPool, map_reduce.Mapper, false)
 
 	return &Dispatcher{
 		config : config,
 		maxWorkers: maxWorkers,
 		maxQueuedItems: maxQueuedItems,
 		workersCollection: workersCollection,
-		workersPool: workersPool,
 	}
 }
 
 func (self *Dispatcher) Run() {
 
-	serviceLocator := services.NewLocator()
-	go serviceLocator.Stats()
+	//serviceLocator := services.NewLocator()
+	//go serviceLocator.Stats()
 
 	// Initializing the queue
-	jobs.JobsQueue = make(chan jobs.Job, self.maxQueuedItems)
-
-	// Starting workers
-	self.workersCollection.Start()
+	jobs.JobsQueue = make(chan interface{}, self.maxQueuedItems)
 
 	go self.dispatch()
 
 	// Launching the server
-	server := NewServer(self.config["base"], processing.NewAggregator(), processing.NewOperator())
-	analyticsServer := NewAnalyticsServer(self.config["analytics"])
+	server := NewServer(self.config[BASE_SERVER])
+	analyticsServer := NewAnalyticsServer(self.config[ANALYTICS_SERVER], processing.NewAggregator(), processing.NewOperator())
 
-	go server.Start()
 	go analyticsServer.Start()
+	server.Start()
 }
 
 func (self *Dispatcher) dispatch() {
 
-	// A new job is received.
-	for job := range jobs.JobsQueue {
+	// Starting workers
+	self.workersCollection.Dispatch(jobs.JobsQueue, make(map_reduce.MapperCollector, self.maxWorkers))
 
-		go func(job jobs.Job) {
-
-			// Blocking till an idle worker is available, then trying to obtain this available worker's job channel,
-			// to send a job request on.
-			jobRequest := <-self.workersPool.GetWorkersPoolChannel()
-
-			// Dispatch the job to the worker job channel.
-			jobRequest <- job
-		}(job)
-
-	}
-
-	defer close(jobs.JobsQueue)
+	//reducerInput := make(chan interface{})
+	//reducerOutput := make(chan interface{})
+	//
+	//go map_reduce.Reducer(reducerInput, reducerOutput)
 }

@@ -10,25 +10,31 @@ import (
 
 type AnalyticsServer struct {
 	config map[string]string
+	aggregator *processing.Aggregator
+	operator *processing.Operator
 }
 
-func NewAnalyticsServer(config map[string]string) *AnalyticsServer {
+func NewAnalyticsServer(config map[string]string, aggregator *processing.Aggregator, operator *processing.Operator) *AnalyticsServer {
 	return &AnalyticsServer{
 		config: config,
+		aggregator: aggregator,
+		operator: operator,
 	}
 }
 
 func (self *AnalyticsServer) Start() {
 
-	listenAddr := self.config["host"] + ":" + self.config["port"]
+	listenAddr := self.config["host"] + self.config["port"]
 
-	http.HandleFunc(self.config["path"], analyticsHandler(self))
+	http.HandleFunc(self.config["path"], self.handler())
 
-	// Should be last line as it is a blocking.
+	go self.aggregator.MonitorNewData()
+	go self.aggregator.Aggregate(self.operator)
+
 	log.Fatal("Analytics Server: ", http.ListenAndServe(listenAddr, nil))
 }
 
-func analyticsHandler(self *AnalyticsServer) func(http.ResponseWriter, *http.Request) {
+func (self *AnalyticsServer) handler() func(http.ResponseWriter, *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 

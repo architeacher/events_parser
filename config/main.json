@@ -1,6 +1,8 @@
 {
   "servers" : {
     "base": {
+      "maxWorkers": 10,
+      "maxQueuedItems": 500,
       "host": "localhost",
       "method": "GET",
       "port": ":8090",
@@ -10,7 +12,7 @@
     "analytics": {
       "host": "localhost",
       "method": "GET",
-      "port": 8095,
+      "port": ":8095",
       "path": "/analytics"
     }
   }

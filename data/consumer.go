@@ -22,8 +22,6 @@ func main() {
 	serviceLocator := services.NewLocator()
 	logger := serviceLocator.Logger()
 
-	go serviceLocator.Stats()
-
 	client := client.NewClient(httpProtocol.NewProtocol(&http.Transport{
 	}))
 
@@ -40,18 +38,14 @@ func main() {
 
 	go func() {
 		for index, event := range data {
-			go func() {
-				if index == 100 {
-					return
-				}
-				response, err := client.SendData(&event, host, path)
 
-				if err != nil {
-					fmt.Println(index, len(event), err.Error())
-				}
+			response, err := client.SendData(&event, host, path)
 
-				clientResponse <- response
-			}()
+			if err != nil {
+				fmt.Println(index, len(event), err.Error())
+			}
+
+			clientResponse <- response
 		}
 	}()
 

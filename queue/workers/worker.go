@@ -3,11 +3,10 @@ package workers
 import (
 	"time"
 	"runtime"
-	"splash/processing"
+	"sync"
 	"splash/services"
 	"splash/queue/jobs"
-	"splash/communication/protocols/protobuf"
-	"sync"
+	"splash/processing/map_reduce"
 )
 
 // Possible worker stats
@@ -34,7 +33,7 @@ func New(id int, jobRequest chan jobs.Job, workersPool *Pool, state chan int) *W
 	}
 }
 
-func (self *Worker) Start(wg sync.WaitGroup) {
+func (self *Worker) Start(mapper map_reduce.MapperFunc, waitGroup interface{}) {
 
 	serviceLocator := services.NewLocator()
 	logger := serviceLocator.Logger()
@@ -49,14 +48,16 @@ func (self *Worker) Start(wg sync.WaitGroup) {
 		select {
 		// A job is received, on the worker's channel, and picked up by the worker.
 		case job := <-self.jobRequest:
-			time.Sleep(job.GetDelay())
-			err := self.process(&job)
 
+			time.Sleep(job.GetDelay())
+
+			err := mapper(&job, self.workersPool.GetOutputChannel())
 			if err != nil {
 				logger.Error("Error processing job:", job.Id(), err.Error())
 			}
 
-			if wg == (sync.WaitGroup{}) {
+			if waitGroup != nil {
+				wg := waitGroup.(sync.WaitGroup)
 				wg.Done()
 			}
 
@@ -105,27 +106,4 @@ func (self *Worker) Stop() {
 func (self *Worker) setState(status int) {
 
 	self.state <- status
-}
-
-func (self *Worker) process(job *jobs.Job) error {
-
-	serviceLocator := services.NewLocator()
-	//logger := serviceLocator.Logger()
-
-	//logger.Info("Worker ", self.id, "is processing Job", job.Id(), " - Creeated at:", job.GetCreated())
-
-	eventType := job.Payload.GetType()
-
-	time := serviceLocator.GetAsTimestamp(job.Payload.GetTime())
-	day := time.Format("2006-01-02")
-
-	switch eventType {
-	case protobuf.Event_SIGNUP:
-
-		// Pushing numbers to merge channel.
-		processing.DailyActiveUsers <- day
-		break
-	}
-
-	return nil
 }

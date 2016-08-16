@@ -1,31 +1,25 @@
 package app
 
 import (
-	//"splash/processing"
-	jobsLib "splash/queue/jobs"
-	"splash/services"
 	"log"
 	"net/http"
 	"io/ioutil"
-	"splash/communication/protocols/protobuf"
-	"github.com/golang/protobuf/proto"
 	"encoding/json"
 	"time"
 	"fmt"
-	"splash/processing"
+	jobsLib "splash/queue/jobs"
+	"splash/services"
+	"github.com/golang/protobuf/proto"
+	"splash/communication/protocols/protobuf"
 )
 
 type Server struct {
 	config map[string]string
-	aggregator *processing.Aggregator
-	operator *processing.Operator
 }
 
-func NewServer(config map[string]string, aggregator *processing.Aggregator, operator *processing.Operator) *Server {
+func NewServer(config map[string]string) *Server {
 	return &Server{
 		config: config,
-		aggregator: aggregator,
-		operator: operator,
 	}
 }
 // Todo: Remove this tracking
@@ -33,16 +27,18 @@ var signups, follows, creations, impressions, total int
 
 func (self *Server) Start() {
 
-	s := &http.Server{
-		Addr:           self.config["port"],
-		Handler:        self,
-	}
+	//s := &http.Server{
+	//	Addr:           self.config["port"],
+	//	Handler:        self,
+	//}
 
-	go self.aggregator.MonitorNewData()
-	go self.aggregator.Aggregate(self.operator)
+
+	listenAddr := self.config["host"] + self.config["port"]
+
+	http.HandleFunc(self.config["path"], self.handler())
 
 	// Todo: Use the logger.
-	log.Fatal(s.ListenAndServe())
+	log.Fatal("HTTP server:", http.ListenAndServe(listenAddr, nil))
 }
 
 func (self *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -58,18 +54,24 @@ func (self *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobs, err := self.getJobsFromBodyData(bodyData)
+	//jobs, err := self.getJobsFromBodyData(bodyData)
+	data, err := self.enumerateData(bodyData)
 
 	if err != nil {
 		logger.Error(err.Error())
 		return
 	}
 
-	jobsLib.PushToChanel(jobsLib.NewCollection(jobs))
+	jobsCollection, err := self.enumerateJobs(data)
+
+	if err != nil {
+		logger.Error(err.Error())
+		return
+	}
+
+	jobsLib.PushToChanel(jobsCollection, jobsLib.JobsQueue)
 
 	self.respond(w)
-
-	return
 }
 
 func (self *Server) handler() func(http.ResponseWriter, *http.Request) {
@@ -80,11 +82,56 @@ func (self *Server) handler() func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func (*Server) buildJob(id int, eventPayload *protobuf.Event_Payload) *jobsLib.Job {
+func (self *Server) enumerateData(bodyData []byte) (chan interface{}, error) {
 
-	payload := jobsLib.NewPayloadFromEventPayload(eventPayload)
-	// Todo: duration should be configurable.
-	return jobsLib.NewJob(id, 1000, time.Now(), payload)
+	output := make(chan interface{})
+
+	go func() {
+
+		protoData := new(protobuf.Event)
+		proto.Unmarshal(bodyData, protoData)
+
+		output <- protoData.GetPayloadCollection()
+
+		close(output)
+	}()
+
+	return output, nil
+}
+
+func (self *Server) enumerateJobs(input chan interface{}) (*jobsLib.Collection, error){
+
+	jobs := []jobsLib.Job{}
+
+	for item := range input {
+		eventPayload := item.([]*protobuf.Event_Payload)
+
+		for index, event := range eventPayload {
+
+			// Todo: Remove debugging code.
+			switch event.GetEventType() {
+			case protobuf.Event_SIGNUP:
+				signups++
+				break
+			case protobuf.Event_FOLLOW:
+				follows++
+				break
+			case protobuf.Event_SPLASH_CREATION:
+				creations++
+				break
+			case protobuf.Event_IMPRESSION:
+				impressions++
+				break
+			}
+
+			job := self.buildJob(index, event)
+			jobs = append(jobs, *job)
+		}
+	}
+
+	total += len(jobs)
+
+	return jobsLib.NewCollection(jobs), nil
 }
 
 func (self *Server) getJobsFromBodyData(bodyData []byte) ([]jobsLib.Job, error) {
@@ -99,7 +146,7 @@ func (self *Server) getJobsFromBodyData(bodyData []byte) ([]jobsLib.Job, error) 
 	jobs := []jobsLib.Job{}
 
 	for index, item := range protoData.GetPayloadCollection() {
-
+		// Todo: Remove debugging code.
 		switch item.GetEventType() {
 		case protobuf.Event_SIGNUP:
 			signups++
@@ -124,11 +171,23 @@ func (self *Server) getJobsFromBodyData(bodyData []byte) ([]jobsLib.Job, error) 
 	return jobs, nil
 }
 
+func (*Server) buildJob(id int, eventPayload *protobuf.Event_Payload) *jobsLib.Job {
+
+	payload := jobsLib.NewPayloadFromEventPayload(eventPayload)
+	// Todo: duration should be configurable.
+	return jobsLib.NewJob(id, 1000, time.Now(), payload)
+}
+
 func (*Server) respond(w http.ResponseWriter) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(map[string]interface{}{"created": true, "total": total, "signups": signups, "follows": follows, "creations": creations, "impressions": impressions}); err != nil {
+
+	if err := json.NewEncoder(w).Encode(
+		map[string]interface{}{
+			"created": true, "total": total, "signups": signups, "follows": follows, "creations": creations, "impressions": impressions,
+		}); err != nil {
+
 		fmt.Println(err.Error())
 	}
 }

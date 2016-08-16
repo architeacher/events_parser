@@ -8,11 +8,6 @@ import (
 	"splash/app"
 )
 
-const (
-	MAX_WORKERS = 35
-	MAX_QUEUE = 500
-)
-
 func main()  {
 
 	serviceLocator := services.NewLocator()
@@ -30,9 +25,9 @@ func main()  {
 		os.Exit(0)
 	}
 
-	baseConfig := parseConfigs(&config)
+	mainConfig := parseConfigs(&config)
 
-	dispatcher := app.NewDispatcher(MAX_WORKERS, MAX_QUEUE, baseConfig)
+	dispatcher := app.NewDispatcher(mainConfig)
 	dispatcher.Run()
 
 	serviceLocator.BlockIndefinitely()

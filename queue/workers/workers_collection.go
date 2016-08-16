@@ -1,27 +1,61 @@
 package workers
 
-import "sync"
+import (
+	"sync"
+	"splash/processing/map_reduce"
+	"splash/queue/jobs"
+)
 
 type Collection struct {
 	workers      []*Worker
 	length       int
+	workersPool  *Pool
+	mapper	     map_reduce.MapperFunc
 	isGrouped    bool
 }
 
-func NewCollection(workers []*Worker, isGrouped bool) *Collection {
+func NewCollection(workers []*Worker, workersPool *Pool, mapper map_reduce.MapperFunc, isGrouped bool) *Collection {
 	return &Collection{
 		workers: workers,
 		length: len(workers),
+		// Should workers work as a group.
+		workersPool: workersPool,
+		mapper: mapper,
 		isGrouped: isGrouped,
 	}
 }
 
+func (self *Collection) Dispatch(tasks chan interface{}, collector map_reduce.MapperCollector) {
+
+	self.Start()
+
+	// A new job is received.
+	for task := range tasks {
+
+		job := task.(jobs.Job)
+
+		go func(job jobs.Job) {
+
+			// Blocking till an idle worker is available, then trying to obtain this available worker's job channel,
+			// to send a job request on.
+			jobRequest := <-self.workersPool.GetWorkersPoolChannel()
+
+			// Dispatch the job to the worker job channel.
+			jobRequest <- job
+		}(job)
+
+		collector <- self.workersPool.GetOutputChannel()
+	}
+
+	defer close(collector)
+}
+
 func (self *Collection) Start() {
 
-	var wg sync.WaitGroup
+	var wg *sync.WaitGroup
 
 	if self.isGrouped {
-		wg = sync.WaitGroup{}
+		wg = new(sync.WaitGroup)
 	}
 
 	for _, worker := range self.workers {
@@ -30,7 +64,11 @@ func (self *Collection) Start() {
 			wg.Add(1)
 		}
 
-		go worker.Start(wg)
+		if self.isGrouped{
+			go worker.Start(self.mapper, wg)
+		} else {
+			go worker.Start(self.mapper, nil)
+		}
 	}
 
 	if self.isGrouped {
@@ -58,4 +96,13 @@ func (self *Collection) Restart() {
 
 	self.Stop()
 	self.Start()
+}
+
+func (self *Collection) GetLength() int {
+	return self.length
+}
+
+func (self *Collection) SetMapper(mapper map_reduce.MapperFunc) *Collection {
+	self.mapper = mapper
+	return self
 }

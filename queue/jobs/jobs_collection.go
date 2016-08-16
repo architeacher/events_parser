@@ -1,5 +1,5 @@
 package jobs
-
+// Todo: Use one collection instead of different collections.
 type Collection struct {
 	jobs []Job
 	length int
@@ -12,3 +12,6 @@ func NewCollection(jobs []Job) *Collection {
 	}
 }
 
+func (self *Collection) GetLength() int {
+	return self.length
+}

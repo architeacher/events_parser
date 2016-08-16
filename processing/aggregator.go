@@ -2,6 +2,7 @@ package processing
 
 import (
 	"time"
+	"sync"
 )
 
 var (
@@ -19,15 +20,18 @@ type Aggregator struct {
 
 func NewAggregator() *Aggregator {
 
-	DailyActiveUsers = make(chan string)
+	// Todo: Dependencies should be injected
+	DailyActiveUsers = make(chan string, 50000)
 	isMergeDone = make(chan bool)
-	AggregationQueue = make(chan map[string]int)
+	AggregationQueue = make(chan map[string]int, 5)
 	aggregatedData = map[string]int{}
 
 	return &Aggregator{}
 }
 
 func (*Aggregator) MonitorNewData() {
+
+	var lock sync.RWMutex
 
 	for {
 		select {
@@ -36,8 +40,10 @@ func (*Aggregator) MonitorNewData() {
 				aggregatedData[date] = 0
 			}
 
+			lock.Lock()
 			aggregatedData[date]++
 			aggregatedData["total"]++
+			lock.Unlock()
 		case <-time.After(time.Millisecond * time.Duration(5000)):
 			isMergeDone <- true
 		}
