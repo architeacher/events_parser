@@ -1,9 +1,10 @@
 package map_reduce
 
 import (
-	"splash/services"
 	"splash/queue/jobs"
 	"splash/communication/protocols/protobuf"
+	"fmt"
+	"reflect"
 )
 
 // MapperCollector is a channel that collects the output from mapper tasks
@@ -15,34 +16,23 @@ type MapperFunc func(interface{}, chan interface{}) error
 // ReducerFunc is a function that performs the reduce part of the MapReduce job
 type ReducerFunc func(chan interface{}, chan interface{})
 
-type MapReduce struct {
-}
-
-
-func NewMapReduce() *MapReduce {
-	return &MapReduce{}
-}
-
 func Mapper(input interface{}, output chan interface{}) error {
 
-	results := map[string]int{}
-
-	serviceLocator := services.NewLocator()
-
-	//logger := serviceLocator.Logger()
-	//logger.Info("Worker ", self.id, "is processing Job", job.Id(), " - Created at:", job.GetCreated())
+	results := map[protobuf.Event_EventType][]interface{}{}
 
 	job := input.(*jobs.Job)
-	payload := job.GetPayload()
+
+	payload := job.GetPayload().(*jobs.Payload)
 	eventType := payload.GetType()
 
-	time := serviceLocator.GetAsTimestamp(payload.GetTime())
-	day := time.Format("2006-01-02")
+	//time := serviceLocator.GetAsTimestamp(payload.GetTime())
+	//day := time.Format("2006-01-02")
+
+	results[eventType] = append(results[eventType], payload)
 
 	switch eventType {
 	case protobuf.Event_SIGNUP:
 		// Pushing numbers to merge channel.
-		results[day]++
 		break
 	}
 
@@ -51,37 +41,25 @@ func Mapper(input interface{}, output chan interface{}) error {
 	return nil
 }
 
-func reducerDispatcher(collector MapperCollector, reducerInput chan interface{}) {
+func Reducer(input chan interface{}, output chan interface{}) {
+	results := map[protobuf.Event_EventType]int{}
+	for matches := range input {
+		//for key, value := range matches.(map[protobuf.Event_EventType]int) {
+		//	_, exists := results[key]
+		//	if !exists {
+		//		results[key] = value
+		//	} else {
+		//		results[key] = results[key] + value
+		//	}
+		//}
+		fmt.Println(reflect.TypeOf(matches))
+	}
+	output <- results
+}
+
+func ReducerDispatcher(collector MapperCollector, reducerInput chan interface{}) {
 	for output := range collector {
 		reducerInput <- <-output
 	}
 	close(reducerInput)
 }
-
-//func Reducer(input chan interface{}, output chan interface{}) {
-//	results := map[Telemetry]int{}
-//	for matches := range input {
-//		for key, value := range matches.(map[Telemetry]int) {
-//			_, exists := results[key]
-//			if !exists {
-//				results[key] = value
-//			} else {
-//				results[key] = results[key] + value
-//			}
-//		}
-//	}
-//	output <- results
-//}
-//
-//func mapReduce(mapper MapperFunc, reducer ReducerFunc, input chan interface{}) interface{} {
-//
-//	reducerInput := make(chan interface{})
-//	reducerOutput := make(chan interface{})
-//	mapperCollector := make(MapperCollector, MaxWorkers)
-//
-//	go reducer(reducerInput, reducerOutput)
-//	go reducerDispatcher(mapperCollector, reducerInput)
-//	go mapperDispatcher(mapper, input, mapperCollector)
-//
-//	return <-reducerOutput
-//}

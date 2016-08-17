@@ -27,12 +27,6 @@ var signups, follows, creations, impressions, total int
 
 func (self *Server) Start() {
 
-	//s := &http.Server{
-	//	Addr:           self.config["port"],
-	//	Handler:        self,
-	//}
-
-
 	listenAddr := self.config["host"] + self.config["port"]
 
 	http.HandleFunc(self.config["path"], self.handler())
@@ -132,43 +126,6 @@ func (self *Server) enumerateJobs(input chan interface{}) (*jobsLib.Collection, 
 	total += len(jobs)
 
 	return jobsLib.NewCollection(jobs), nil
-}
-
-func (self *Server) getJobsFromBodyData(bodyData []byte) ([]jobsLib.Job, error) {
-
-	protoData := new(protobuf.Event)
-	err := proto.Unmarshal(bodyData, protoData)
-
-	if err != nil {
-		return nil, err
-	}
-
-	jobs := []jobsLib.Job{}
-
-	for index, item := range protoData.GetPayloadCollection() {
-		// Todo: Remove debugging code.
-		switch item.GetEventType() {
-		case protobuf.Event_SIGNUP:
-			signups++
-			break
-		case protobuf.Event_FOLLOW:
-			follows++
-			break
-		case protobuf.Event_SPLASH_CREATION:
-			creations++
-			break
-		case protobuf.Event_IMPRESSION:
-			impressions++
-			break
-		}
-
-		job := self.buildJob(index, item)
-		jobs = append(jobs, *job)
-	}
-
-	total += len(jobs)
-
-	return jobs, nil
 }
 
 func (*Server) buildJob(id int, eventPayload *protobuf.Event_Payload) *jobsLib.Job {

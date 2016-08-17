@@ -14,19 +14,19 @@ type Collection struct {
 	isGrouped    bool
 }
 
-func NewCollection(workers []*Worker, workersPool *Pool, mapper map_reduce.MapperFunc, isGrouped bool) *Collection {
+func NewCollection(workers []*Worker, workersPool *Pool, isGrouped bool) *Collection {
 	return &Collection{
 		workers: workers,
 		length: len(workers),
 		// Should workers work as a group.
 		workersPool: workersPool,
-		mapper: mapper,
 		isGrouped: isGrouped,
 	}
 }
 
-func (self *Collection) Dispatch(tasks chan interface{}, collector map_reduce.MapperCollector) {
+func (self *Collection) DispatchMappers(mapper map_reduce.MapperFunc, tasks chan interface{}, collector map_reduce.MapperCollector) {
 
+	self.SetMapper(mapper)
 	self.Start()
 
 	// A new job is received.

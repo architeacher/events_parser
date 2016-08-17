@@ -56,6 +56,8 @@ func (self *Worker) Start(mapper map_reduce.MapperFunc, waitGroup interface{}) {
 				logger.Error("Error processing job:", job.Id(), err.Error())
 			}
 
+			job.SetFinished(time.Now())
+
 			if waitGroup != nil {
 				wg := waitGroup.(sync.WaitGroup)
 				wg.Done()

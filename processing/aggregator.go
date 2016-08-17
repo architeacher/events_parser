@@ -16,6 +16,9 @@ var (
 )
 
 type Aggregator struct {
+	dailyActiveUsers map[string] int
+	top10WeeklyViewedUsers map[string][]string
+	averageUserSession int
 }
 
 func NewAggregator() *Aggregator {

@@ -12,11 +12,12 @@ type Job struct {
 	delay   time.Duration
 	created time.Time
 	finished time.Time
+
 	// Making the payload it self separated from the job.
-	payload *Payload
+	payload interface{}
 }
 
-func NewJob(id int, delay time.Duration, created time.Time, payload *Payload) *Job {
+func NewJob(id int, delay time.Duration, created time.Time, payload interface{}) *Job {
 	return &Job{
 		id:id,
 		delay: delay,
@@ -46,7 +47,7 @@ func (self *Job) GetFinished() time.Time {
 	return self.finished
 }
 
-func (self *Job) GetPayload() *Payload {
+func (self *Job) GetPayload() interface{} {
 	return self.payload
 }
 

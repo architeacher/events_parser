@@ -1,11 +1,11 @@
 package app
 
 import (
-	workersLib "splash/queue/workers"
 	"splash/processing"
 	"splash/queue/jobs"
 	"strconv"
 	"splash/processing/map_reduce"
+	workersLib "splash/queue/workers"
 )
 
 const (
@@ -18,7 +18,6 @@ const (
 type Dispatcher struct {
 	config                     map[string]map[string]string
 	maxWorkers, maxQueuedItems int
-	workersCollection          *workersLib.Collection
 }
 
 func NewDispatcher(config map[string]map[string]string) *Dispatcher {
@@ -26,22 +25,10 @@ func NewDispatcher(config map[string]map[string]string) *Dispatcher {
 	maxWorkers, _ := strconv.Atoi(config[BASE_SERVER][MAX_WORKERS])
 	maxQueuedItems, _ := strconv.Atoi(config[BASE_SERVER][MAX_QUEUED_ITEMS])
 
-	workers := make([]*workersLib.Worker, maxWorkers)
-	jobsRequestsPool := make(chan chan jobs.Job, maxWorkers)
-
-	workersPool := workersLib.NewPool(jobsRequestsPool, make(chan interface{}))
-
-	for index := range workers {
-		workers[index] = workersLib.New(index, make(chan jobs.Job), workersPool, make(chan int))
-	}
-
-	workersCollection := workersLib.NewCollection(workers, workersPool, map_reduce.Mapper, false)
-
 	return &Dispatcher{
 		config : config,
 		maxWorkers: maxWorkers,
 		maxQueuedItems: maxQueuedItems,
-		workersCollection: workersCollection,
 	}
 }
 
@@ -63,13 +50,33 @@ func (self *Dispatcher) Run() {
 	server.Start()
 }
 
-func (self *Dispatcher) dispatch() {
+func (self *Dispatcher) dispatch() interface{} {
 
-	// Starting workers
-	self.workersCollection.Dispatch(jobs.JobsQueue, make(map_reduce.MapperCollector, self.maxWorkers))
+	results := self.mapReduce(map_reduce.Mapper, map_reduce.Reducer, jobs.JobsQueue)
+	return results
+}
 
-	//reducerInput := make(chan interface{})
-	//reducerOutput := make(chan interface{})
-	//
-	//go map_reduce.Reducer(reducerInput, reducerOutput)
+
+func (self *Dispatcher) mapReduce(mapper map_reduce.MapperFunc, reducer map_reduce.ReducerFunc, input chan interface{}) interface{} {
+
+	workers := make([]*workersLib.Worker, self.maxWorkers)
+	workersPool := workersLib.NewPool(make(chan chan jobs.Job, self.maxWorkers), make(chan interface{}))
+
+	for index := range workers {
+		workers[index] = workersLib.New(index, make(chan jobs.Job), workersPool, make(chan int))
+	}
+
+	workersCollection := workersLib.NewCollection(workers, workersPool, false)
+
+	reducerInput := make(chan interface{})
+	reducerOutput := make(chan interface{})
+	mapperCollector := make(map_reduce.MapperCollector, self.maxWorkers)
+
+	go reducer(reducerInput, reducerOutput)
+	go map_reduce.ReducerDispatcher(mapperCollector, reducerInput)
+
+	// Starting workers mapper
+	go workersCollection.DispatchMappers(mapper, input, mapperCollector)
+
+	return <-reducerOutput
 }
