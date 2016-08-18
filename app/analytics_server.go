@@ -28,8 +28,8 @@ func (self *AnalyticsServer) Start() {
 
 	http.HandleFunc(self.config["path"], self.handler())
 
-	go self.aggregator.MonitorNewData()
-	go self.aggregator.Aggregate(self.operator)
+	//go self.aggregator.MonitorNewData()
+	//go self.aggregator.Aggregate(self.operator)
 
 	log.Fatal("Analytics Server: ", http.ListenAndServe(listenAddr, nil))
 }

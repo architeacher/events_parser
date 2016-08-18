@@ -21,10 +21,10 @@ func NewPayload(time int64, eventType protobuf.Event_EventType, actorId, subject
 
 func NewPayloadFromEventPayload(eventPayload *protobuf.Event_Payload) *Payload {
 	return NewPayload(
-		eventPayload.GetTime(),
-		eventPayload.GetEventType(),
-		eventPayload.GetActorId(),
-		eventPayload.GetSubjectId(),
+		eventPayload.Time,
+		eventPayload.EventType,
+		eventPayload.ActorId,
+		eventPayload.SubjectId,
 	)
 }
 

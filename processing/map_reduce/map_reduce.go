@@ -21,7 +21,7 @@ func Mapper(input interface{}, output chan interface{}) error {
 
 	serviceLocator := services.NewLocator()
 
-	results := map[protobuf.Event_EventType]interface{}{}
+	results := map[processing.GroupingType]interface{}{}
 
 	job := input.(*jobs.Job)
 
@@ -29,19 +29,21 @@ func Mapper(input interface{}, output chan interface{}) error {
 	eventType := payload.GetType()
 
 	time := serviceLocator.GetAsTimestamp(payload.GetTime())
-	day := time.Format("2006-01-02")
 
-	// We need to pass the user id along with the data, in order to remove duplicate users activities.
-	results[processing.TYPE_GROUPING_BY_DAY] = map[string]string{
-		"" : day,
-		"": payload.GetActorId(),
+	year, week := time.ISOWeek()
+
+	results[processing.TYPE_GROUPING_BY_TIME] = map[string]interface{}{
+		processing.KEY_TIME : time,
+		processing.KEY_ACTOR: payload.GetActorId(),
 	}
-	
-	results[processing.TYPE_GROUPING_BY_USER] = payload.GetActorId()
 
 	switch eventType {
 	case protobuf.Event_IMPRESSION:
-		results[processing.TYPE_GROUPING_BY_IMPRESSION] = payload.GetSubjectId()
+		results[processing.TYPE_GROUPING_BY_IMPRESSION] = map[string]interface{}{
+			processing.KEY_WEEK: week,
+			processing.KEY_YEAR: year,
+			processing.KEY_SUBJECT: payload.GetSubjectId(),
+		}
 		break
 	}
 

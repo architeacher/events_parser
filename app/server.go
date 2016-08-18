@@ -103,7 +103,7 @@ func (self *Server) enumerateJobs(input chan interface{}) (*jobsLib.Collection, 
 		for index, event := range eventPayload {
 
 			// Todo: Remove debugging code.
-			switch event.GetEventType() {
+			switch event.EventType {
 			case protobuf.Event_SIGNUP:
 				signups++
 				break

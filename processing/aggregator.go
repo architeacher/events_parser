@@ -8,9 +8,16 @@ import (
 type GroupingType int
 
 const (
-	TYPE_GROUPING_BY_DAY GroupingType = iota
-	TYPE_GROUPING_BY_IMPRESSION
+	TYPE_GROUPING_BY_TIME GroupingType = iota
 	TYPE_GROUPING_BY_USER
+	TYPE_GROUPING_BY_IMPRESSION
+
+	KEY_TIME string = "time"
+
+	KEY_WEEK string = "week"
+	KEY_YEAR string = "year"
+	KEY_ACTOR string = "actor"
+	KEY_SUBJECT string = "subject"
 )
 
 var (
@@ -44,7 +51,7 @@ func (self *Aggregator) AggregateBy(groupingType GroupingType, data interface{})
 
 	var output int
 	switch groupingType {
-	case TYPE_GROUPING_BY_DAY:
+	case TYPE_GROUPING_BY_TIME:
 		return self.aggregateByDay(data)
 	case TYPE_GROUPING_BY_IMPRESSION:
 		return self.aggregateByImpression(data)
