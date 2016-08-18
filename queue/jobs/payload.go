@@ -5,11 +5,12 @@ import (
 )
 
 type Payload struct {
-	time, actorId, subjectId   	int64
+	time   	int64
+	actorId, subjectId string
 	eventType protobuf.Event_EventType
 }
 
-func NewPayload(time int64, eventType protobuf.Event_EventType, actorId, subjectId int64) *Payload {
+func NewPayload(time int64, eventType protobuf.Event_EventType, actorId, subjectId string) *Payload {
 	return &Payload{
 		time: time,
 		eventType: eventType,
@@ -35,10 +36,10 @@ func (self * Payload) GetType() protobuf.Event_EventType {
 	return self.eventType
 }
 
-func (self * Payload) GetActorId() int64 {
+func (self * Payload) GetActorId() string {
 	return self.actorId
 }
 
-func (self * Payload) GetSubjectId() int64 {
+func (self * Payload) GetSubjectId() string {
 	return self.subjectId
 }

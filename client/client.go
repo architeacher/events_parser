@@ -130,23 +130,10 @@ func (self *Client) BuildPayload(row []string) (*protobuf.Event_Payload, error){
 			payload.EventType = &entry
 			break
 		case 2:
-
-			entry, err := strconv.ParseInt(value, 10, 0)
-
-			if nil != err {
-				return nil, err
-			}
-
-			payload.ActorId = &entry
+			payload.ActorId = value
+			break
 		case 3:
-
-			entry, err := strconv.ParseInt(value, 10, 0)
-
-			if nil != err {
-				return nil, err
-			}
-
-			payload.SubjectId = &entry
+			payload.SubjectId = value
 			break
 		}
 	}

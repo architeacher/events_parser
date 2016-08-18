@@ -1,3 +1,5 @@
+syntax = "proto3";
+
 package protobuf;
 
 message Event {
@@ -12,11 +14,11 @@ message Event {
     }
 
     message Payload {
-        required int64 time = 1;
-        required EventType eventType = 2;
+        int64 time = 1;
+        EventType eventType = 2;
         // Id of the user who took the action.
-        optional int64 actorId = 3;
+        string actorId = 3;
         // Id of the user who is affected by the action...
-        optional int64 subjectId = 4;
+        string subjectId = 4;
     }
 }
