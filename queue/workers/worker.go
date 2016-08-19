@@ -6,7 +6,6 @@ import (
 	"sync"
 	"splash/services"
 	"splash/queue/jobs"
-	"splash/processing/map_reduce"
 )
 
 // Possible worker stats
@@ -17,14 +16,14 @@ const (
 )
 
 type Worker struct {
-	id          int
+	id          string
 	state       chan int
 	// A chanel that the worker can receive a work on.
 	jobRequest  chan jobs.Job
 	workersPool *Pool
 }
 
-func New(id int, jobRequest chan jobs.Job, workersPool *Pool, state chan int) *Worker {
+func New(id string, jobRequest chan jobs.Job, workersPool *Pool, state chan int) *Worker {
 	return &Worker{
 		id: id,
 		state: state,
@@ -33,7 +32,7 @@ func New(id int, jobRequest chan jobs.Job, workersPool *Pool, state chan int) *W
 	}
 }
 
-func (self *Worker) Start(mapper map_reduce.MapperFunc, waitGroup interface{}) {
+func (self *Worker) Start(waitGroup interface{}) {
 
 	serviceLocator := services.NewLocator()
 	logger := serviceLocator.Logger()
@@ -51,9 +50,12 @@ func (self *Worker) Start(mapper map_reduce.MapperFunc, waitGroup interface{}) {
 
 			time.Sleep(job.GetDelay())
 
-			err := mapper(&job, self.workersPool.GetOutputChannel())
-			if err != nil {
-				logger.Error("Error processing job:", job.Id(), err.Error())
+			for _, mapper := range job.GetMappers() {
+
+				err := mapper(&job, self.workersPool.GetOutputChannel())
+				if err != nil {
+					logger.Error("Error processing job:", job.Id(), err.Error())
+				}
 			}
 
 			job.SetFinished(time.Now())
@@ -103,6 +105,10 @@ func (self *Worker) Pause() {
 func (self *Worker) Stop() {
 
 	go self.setState(STOPPED)
+}
+
+func (self *Worker) Id() string {
+	return self.id
 }
 
 func (self *Worker) setState(status int) {

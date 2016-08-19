@@ -1,8 +1,7 @@
-package processing
+package aggregation
 
 import (
-	//"time"
-	//"sync"
+	"time"
 )
 
 type GroupingType int
@@ -47,34 +46,43 @@ func NewAggregator() *Aggregator {
 	return &Aggregator{}
 }
 
-func (self *Aggregator) AggregateBy(groupingType GroupingType, data interface{}) interface{} {
+func (self *Aggregator) AggregateBy(groupingType GroupingType, data interface{}, aggregationEndPoint map[GroupingType]interface{}) {
 
-	var output int
 	switch groupingType {
 	case TYPE_GROUPING_BY_TIME:
-		return self.aggregateByDay(data)
+		self.aggregateByDay(data, aggregationEndPoint)
 	case TYPE_GROUPING_BY_IMPRESSION:
-		return self.aggregateByImpression(data)
+		self.aggregateByImpression(data, aggregationEndPoint)
 	case TYPE_GROUPING_BY_USER:
-		return self.aggregateByUser(data)
+		self.aggregateByUser(data, aggregationEndPoint)
+	}
+}
+
+func (*Aggregator) aggregateByDay(data interface{}, aggregationEndPoint map[GroupingType]interface{}) {
+	//day := time.Parse()
+	//aggregationEndPoint[day]
+
+	inputData := data.(map[string]interface{})
+	actionTime := inputData[KEY_TIME].(time.Time)
+	day := actionTime.Format("2006-01-02")
+
+	if aggregationEndPoint[TYPE_GROUPING_BY_TIME] == nil {
+		aggregationEndPoint[TYPE_GROUPING_BY_TIME] = make(map[string][]string)
 	}
 
-	return output
+	storedData := aggregationEndPoint[TYPE_GROUPING_BY_TIME].(map[string][]string)
+
+	storedData[day] = append(storedData[day], inputData[KEY_ACTOR].(string))
+
+	aggregationEndPoint[TYPE_GROUPING_BY_TIME] = storedData
 }
 
-func (*Aggregator) aggregateByDay(data interface{}) map[string]interface{} {
-	var output map[string]interface{}
-	return output
+func (*Aggregator) aggregateByImpression(data interface{}, aggregationEndPoint map[GroupingType]interface{}) {
+
 }
 
-func (*Aggregator) aggregateByImpression(data interface{}) map[string]interface{} {
-	var output map[string]interface{}
-	return output
-}
+func (*Aggregator) aggregateByUser(data interface{}, aggregationEndPoint interface{}) {
 
-func (*Aggregator) aggregateByUser(data interface{}) map[string]interface{} {
-	var output map[string]interface{}
-	return output
 }
 
 //func (*Aggregator) MonitorNewData() {

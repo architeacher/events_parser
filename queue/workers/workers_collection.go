@@ -10,7 +10,6 @@ type Collection struct {
 	workers      []*Worker
 	length       int
 	workersPool  *Pool
-	mapper	     map_reduce.MapperFunc
 	isGrouped    bool
 }
 
@@ -24,9 +23,8 @@ func NewCollection(workers []*Worker, workersPool *Pool, isGrouped bool) *Collec
 	}
 }
 
-func (self *Collection) DispatchMappers(mapper map_reduce.MapperFunc, tasks chan interface{}, collector map_reduce.MapperCollector) {
+func (self *Collection) DispatchMappers(tasks chan interface{}, collector map_reduce.MapperCollector) {
 
-	self.SetMapper(mapper)
 	self.Start()
 
 	// A new job is received.
@@ -65,9 +63,9 @@ func (self *Collection) Start() {
 		}
 
 		if self.isGrouped{
-			go worker.Start(self.mapper, wg)
+			go worker.Start(wg)
 		} else {
-			go worker.Start(self.mapper, nil)
+			go worker.Start(nil)
 		}
 	}
 
@@ -100,9 +98,4 @@ func (self *Collection) Restart() {
 
 func (self *Collection) GetLength() int {
 	return self.length
-}
-
-func (self *Collection) SetMapper(mapper map_reduce.MapperFunc) *Collection {
-	self.mapper = mapper
-	return self
 }

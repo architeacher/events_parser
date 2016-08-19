@@ -106,7 +106,7 @@ func (self *Client) BuildPayload(row []string) (*protobuf.Event_Payload, error){
 				return nil, err
 			}
 
-			payload.Time = &entry
+			payload.Time = entry
 			break
 		case 1:
 
@@ -127,7 +127,7 @@ func (self *Client) BuildPayload(row []string) (*protobuf.Event_Payload, error){
 				break
 			}
 
-			payload.EventType = &entry
+			payload.EventType = entry
 			break
 		case 2:
 			payload.ActorId = value

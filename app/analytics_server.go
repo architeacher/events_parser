@@ -2,23 +2,23 @@ package app
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
-	"splash/processing"
+	"splash/processing/aggregation"
 	"splash/services"
+	"splash/logger"
 )
 
 type AnalyticsServer struct {
 	config map[string]string
-	aggregator *processing.Aggregator
-	operator *processing.Operator
+	aggregator *aggregation.Aggregator
+	logger *logger.Logger
 }
 
-func NewAnalyticsServer(config map[string]string, aggregator *processing.Aggregator, operator *processing.Operator) *AnalyticsServer {
+func NewAnalyticsServer(config map[string]string, aggregator *aggregation.Aggregator, logger *logger.Logger) *AnalyticsServer {
 	return &AnalyticsServer{
 		config: config,
 		aggregator: aggregator,
-		operator: operator,
+		logger: logger,
 	}
 }
 
@@ -28,10 +28,7 @@ func (self *AnalyticsServer) Start() {
 
 	http.HandleFunc(self.config["path"], self.handler())
 
-	//go self.aggregator.MonitorNewData()
-	//go self.aggregator.Aggregate(self.operator)
-
-	log.Fatal("Analytics Server: ", http.ListenAndServe(listenAddr, nil))
+	self.logger.Alert("Analytics Server: ", http.ListenAndServe(listenAddr, nil))
 }
 
 func (self *AnalyticsServer) handler() func(http.ResponseWriter, *http.Request) {
@@ -48,7 +45,7 @@ func (*AnalyticsServer) respond(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusOK)
 
 	// Locking on Aggregated data
-	dailyActiveUsers := <-processing.AggregationQueue
+	dailyActiveUsers := <-aggregation.AggregationQueue
 
 	serviceLocator := services.Locator{}
 	logger := serviceLocator.Logger()

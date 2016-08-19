@@ -2,10 +2,13 @@ package app
 
 import (
 	"splash/processing"
+	"splash/processing/aggregation"
 	"splash/queue/jobs"
 	"strconv"
 	"splash/processing/map_reduce"
 	workersLib "splash/queue/workers"
+	"splash/processing/map_reduce/reducers"
+	"splash/services"
 )
 
 const (
@@ -34,36 +37,34 @@ func NewDispatcher(config map[string]map[string]string) *Dispatcher {
 
 func (self *Dispatcher) Run() {
 
-	//serviceLocator := services.NewLocator()
-	//go serviceLocator.Stats()
-
 	// Initializing the queue
 	jobs.JobsQueue = make(chan interface{}, self.maxQueuedItems)
 
 	go self.dispatch()
 
+	serviceLocator := services.NewLocator()
+	logger := serviceLocator.Logger()
+
 	// Launching the server
-	server := NewServer(self.config[BASE_SERVER])
-	analyticsServer := NewAnalyticsServer(self.config[ANALYTICS_SERVER], processing.NewAggregator(), processing.NewOperator())
+	server := NewServer(self.config[BASE_SERVER], processing.NewOperator(), logger)
+	analyticsServer := NewAnalyticsServer(self.config[ANALYTICS_SERVER], aggregation.NewAggregator())
 
 	go analyticsServer.Start()
 	server.Start()
 }
 
 func (self *Dispatcher) dispatch() interface{} {
-
-	results := self.mapReduce(map_reduce.Mapper, map_reduce.Reducer, jobs.JobsQueue)
-	return results
+	return <-self.mapReduce(reducers.Reducer, jobs.JobsQueue)
 }
 
 
-func (self *Dispatcher) mapReduce(mapper map_reduce.MapperFunc, reducer map_reduce.ReducerFunc, input chan interface{}) interface{} {
+func (self *Dispatcher) mapReduce(reducer map_reduce.ReducerFunc, input chan interface{}) chan interface{} {
 
 	workers := make([]*workersLib.Worker, self.maxWorkers)
 	workersPool := workersLib.NewPool(make(chan chan jobs.Job, self.maxWorkers), make(chan interface{}))
 
 	for index := range workers {
-		workers[index] = workersLib.New(index, make(chan jobs.Job), workersPool, make(chan int))
+		workers[index] = workersLib.New(strconv.Itoa(index), make(chan jobs.Job), workersPool, make(chan int))
 	}
 
 	workersCollection := workersLib.NewCollection(workers, workersPool, false)
@@ -76,7 +77,7 @@ func (self *Dispatcher) mapReduce(mapper map_reduce.MapperFunc, reducer map_redu
 	go map_reduce.ReducerDispatcher(mapperCollector, reducerInput)
 
 	// Starting workers mapper
-	go workersCollection.DispatchMappers(mapper, input, mapperCollector)
+	go workersCollection.DispatchMappers(input, mapperCollector)
 
-	return <-reducerOutput
+	return reducerOutput
 }
