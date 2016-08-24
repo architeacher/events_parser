@@ -5,10 +5,10 @@ import (
 	"splash/communication"
 )
 
-type ResponsePayloadProcessor struct{
+type ResponsePayloadProcessor struct {
 }
 
-func (self * ResponsePayloadProcessor) Process(resp *communication.Response) ([]int, error) {
+func (self *ResponsePayloadProcessor) Process(resp *communication.Response) ([]int, error) {
 
 	var numbers []int
 
@@ -18,7 +18,7 @@ func (self * ResponsePayloadProcessor) Process(resp *communication.Response) ([]
 
 		err := json.Unmarshal([]byte(resp.Body()), &numbersResponse)
 
-		if (nil != err) {
+		if nil != err {
 
 			return nil, err
 		}
@@ -34,4 +34,3 @@ func (self * ResponsePayloadProcessor) Process(resp *communication.Response) ([]
 
 	return numbers, nil
 }
-

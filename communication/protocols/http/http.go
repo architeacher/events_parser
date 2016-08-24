@@ -1,8 +1,8 @@
 package http
 
 import (
-	"net/http"
 	"bytes"
+	"net/http"
 	"splash/communication"
 )
 
@@ -18,7 +18,7 @@ func (self *Protocol) Client() *http.Transport {
 	return self.client
 }
 
-func (self *Protocol) Send(req *communication.Request) (*communication.Response, error){
+func (self *Protocol) Send(req *communication.Request) (*communication.Response, error) {
 
 	httpRequest, err := NewHttpRequest(req)
 
@@ -28,7 +28,7 @@ func (self *Protocol) Send(req *communication.Request) (*communication.Response,
 
 	nativeRequest, err := http.NewRequest(
 		httpRequest.Method(),
-		httpRequest.Protocol() + httpRequest.Host() + httpRequest.path,
+		httpRequest.Protocol()+httpRequest.Host()+httpRequest.path,
 		bytes.NewBuffer(httpRequest.Body()),
 	)
 
@@ -38,7 +38,6 @@ func (self *Protocol) Send(req *communication.Request) (*communication.Response,
 
 	// Setting headers
 	for key, value := range req.Meta() {
-
 		nativeRequest.Header.Add(key, value)
 	}
 

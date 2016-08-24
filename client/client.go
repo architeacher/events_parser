@@ -1,14 +1,14 @@
 package client
 
 import (
-	"os"
-	"encoding/csv"
 	"bufio"
-	"strconv"
+	"encoding/csv"
 	"github.com/golang/protobuf/proto"
-	"splash/communication/protocols/protobuf"
+	"os"
 	"splash/communication"
 	httpProtocol "splash/communication/protocols/http"
+	"splash/communication/protocols/protobuf"
+	"strconv"
 )
 
 type Client struct {
@@ -21,7 +21,7 @@ func NewClient(protocol *httpProtocol.Protocol) *Client {
 	}
 }
 
-func (self *Client) LoadCSVFile(path *string) ([][]byte, error){
+func (self *Client) LoadCSVFile(path *string) ([][]byte, error) {
 
 	file, err := os.Open(*path)
 
@@ -44,7 +44,7 @@ func (self *Client) LoadCSVFile(path *string) ([][]byte, error){
 	payloadCollection := make([]*protobuf.Event_Payload, 0)
 	eventsBuffers := make([][]byte, 0)
 
-	totalRecords, rowsSizes,  k := len(rows), 0, 0
+	totalRecords, rowsSizes, k := len(rows), 0, 0
 
 	requiredItemsInPayloadCollection := 1
 
@@ -62,7 +62,7 @@ func (self *Client) LoadCSVFile(path *string) ([][]byte, error){
 
 		payloadCollection = append(payloadCollection, payload)
 
-		if (requiredItemsInPayloadCollection == k){
+		if requiredItemsInPayloadCollection == k {
 
 			event := new(protobuf.Event)
 			event.PayloadCollection = payloadCollection
@@ -80,7 +80,7 @@ func (self *Client) LoadCSVFile(path *string) ([][]byte, error){
 
 			remainingRecords := totalRecords - index - 1
 
-			if requiredItemsInPayloadCollection > remainingRecords{
+			if requiredItemsInPayloadCollection > remainingRecords {
 				requiredItemsInPayloadCollection = remainingRecords
 			}
 
@@ -91,7 +91,7 @@ func (self *Client) LoadCSVFile(path *string) ([][]byte, error){
 	return eventsBuffers, nil
 }
 
-func (self *Client) BuildPayload(row []string) (*protobuf.Event_Payload, error){
+func (self *Client) BuildPayload(row []string) (*protobuf.Event_Payload, error) {
 
 	payload := &protobuf.Event_Payload{}
 
@@ -144,7 +144,7 @@ func (self *Client) BuildPayload(row []string) (*protobuf.Event_Payload, error){
 func (self *Client) getRowSize(row []string) int {
 
 	size := 0
-	for _, record := range row  {
+	for _, record := range row {
 
 		size += len(record)
 	}
@@ -152,14 +152,16 @@ func (self *Client) getRowSize(row []string) int {
 	return size
 }
 
-func (self *Client) SendData(data *[]byte, host, path *string) (*communication.Response, error) {
+func (self *Client) SendData(index int, data *[]byte, host, path, authorizationToken *string) (*communication.Response, error) {
 
-	request := communication.NewRequest(*data, map[string]string{
-		"method": "Post",
-		"protocol": "http://",
-		"host": *host,
-		"path": *path,
-		"Content-Type": "application/x-protobuf",
+	request := communication.NewRequest(*data, map[string]interface{}{
+		"method":        "Post",
+		"protocol":      "http://",
+		"host":          *host,
+		"path":          *path,
+		"Content-Type":  "application/x-protobuf",
+		"Authorization": *authorizationToken,
+		"Patch-Index":   index,
 	})
 
 	protocolResponse, err := self.protocol.Send(request)

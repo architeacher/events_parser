@@ -1,26 +1,27 @@
 package app
 
 import (
-	"net/http"
-	"io/ioutil"
 	"encoding/json"
 	"fmt"
-	jobsLib "splash/queue/jobs"
-	"splash/processing"
+	"io/ioutil"
+	"net/http"
 	"splash/logger"
+	"splash/processing"
+	jobsLib "splash/queue/jobs"
+	"splash/services"
 )
 
 type Server struct {
-	config map[string]string
+	config   map[string]string
 	operator *processing.Operator
-	logger *logger.Logger
+	logger   *logger.Logger
 }
 
 func NewServer(config map[string]string, operator *processing.Operator, logger *logger.Logger) *Server {
 	return &Server{
-		config: config,
+		config:   config,
 		operator: operator,
-		logger: logger,
+		logger:   logger,
 	}
 }
 
@@ -34,6 +35,17 @@ func (self *Server) Start() {
 
 func (self *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
+	authorizationToken := r.Header["Authorization"][0]
+
+	serviceLocator := services.NewLocator()
+
+	collection := PatchesCollection[authorizationToken]
+
+	if collection == nil {
+		collection = jobsLib.NewPatchCollection(serviceLocator.RandString("Collection[patch]-", 55))
+		PatchesCollection[authorizationToken] = collection
+	}
+
 	bodyData, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
@@ -41,7 +53,6 @@ func (self *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//jobs, err := self.getJobsFromBodyData(bodyData)
 	data, err := self.operator.EnumerateData(bodyData)
 
 	if err != nil {
@@ -49,22 +60,23 @@ func (self *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobsCollection, err := self.operator.EnumerateJobs(data)
+	patch, err := self.operator.EnumeratePatch(collection, data)
 
+	fmt.Println(PatchesCollection[authorizationToken].GetLength())
 	if err != nil {
 		self.logger.Error(err.Error())
 		return
 	}
 
-	jobsLib.PushToChanel(jobsCollection, jobsLib.JobsQueue)
+	processing.Total += patch.GetLength()
+
+	jobsLib.PushToChanel(patch, jobsLib.JobsQueue)
 
 	self.respond(w)
 }
 
 func (self *Server) handler() func(http.ResponseWriter, *http.Request) {
-
-	return func (w http.ResponseWriter, r *http.Request) {
-
+	return func(w http.ResponseWriter, r *http.Request) {
 		self.ServeHTTP(w, r)
 	}
 }

@@ -1,48 +1,50 @@
 package workers
 
 import (
-	"time"
 	"runtime"
-	"sync"
-	"splash/services"
 	"splash/queue/jobs"
+	"sync"
+	"time"
+	"splash/logger"
 )
 
 // Possible worker stats
 const (
-	PAUSED = 0
+	PAUSED  = 0
 	RUNNING = 1
 	STOPPED = 2
 )
 
+var (
+	workingTimes uint64 = 0
+)
+
 type Worker struct {
-	id          string
-	state       chan int
+	id    string
+	state chan int
+	workersPool *Pool
 	// A chanel that the worker can receive a work on.
 	jobRequest  chan jobs.Job
-	workersPool *Pool
+	logger *logger.Logger
 }
 
-func New(id string, jobRequest chan jobs.Job, workersPool *Pool, state chan int) *Worker {
+func New(id string, state chan int, workersPool *Pool, jobRequest chan jobs.Job, logger *logger.Logger) *Worker {
 	return &Worker{
-		id: id,
-		state: state,
-		jobRequest: jobRequest,
+		id:          id,
+		state:       state,
 		workersPool: workersPool,
+		jobRequest:  jobRequest,
+		logger: logger,
 	}
 }
 
 func (self *Worker) Start(waitGroup interface{}) {
-
-	serviceLocator := services.NewLocator()
-	logger := serviceLocator.Logger()
-
 	go self.setState(RUNNING)
 
 	for {
 		// The current worker will register it self as an idle, by adding its own job chanel to the jobs pool,
 		// so that it will receive work on this chanel later.
-		self.workersPool.JobsRequestsPool <- self.jobRequest
+		self.workersPool.AssignIdleWorkerChannel(self.jobRequest)
 
 		select {
 		// A job is received, on the worker's channel, and picked up by the worker.
@@ -51,14 +53,13 @@ func (self *Worker) Start(waitGroup interface{}) {
 			time.Sleep(job.GetDelay())
 
 			for _, mapper := range job.GetMappers() {
-
 				err := mapper(&job, self.workersPool.GetOutputChannel())
 				if err != nil {
-					logger.Error("Error processing job:", job.Id(), err.Error())
+					self.logger.Error("Error processing job:", job.Id(), err.Error())
 				}
 			}
 
-			job.SetFinished(time.Now())
+			job.SetFinished(true, time.Now())
 
 			if waitGroup != nil {
 				wg := waitGroup.(sync.WaitGroup)
@@ -66,20 +67,20 @@ func (self *Worker) Start(waitGroup interface{}) {
 			}
 
 		// Workers will stop working after 24 hours, taking a nap :P
-		case <-time.After(time.Hour * 24):
-			self.Stop()
+		//case <-time.After(time.Hour * 24):
+		//	self.Stop()
 
 		case state := <-self.state:
 
 			switch state {
 			case PAUSED:
-				logger.Info("Worker", self.id, "is paused.")
+				self.logger.Info("Worker", self.id, "is paused.")
 
 			case RUNNING:
-				logger.Info("Worker", self.id, "is started.")
+				self.logger.Info("Worker", self.id, "is started.")
 
 			case STOPPED:
-				logger.Info("Worker", self.id, "is stopped.")
+				self.logger.Info("Worker", self.id, "is stopped.")
 				return
 
 			default:
@@ -98,12 +99,10 @@ func (self *Worker) Start(waitGroup interface{}) {
 }
 
 func (self *Worker) Pause() {
-
 	go self.setState(PAUSED)
 }
 
 func (self *Worker) Stop() {
-
 	go self.setState(STOPPED)
 }
 
@@ -112,6 +111,5 @@ func (self *Worker) Id() string {
 }
 
 func (self *Worker) setState(status int) {
-
 	self.state <- status
 }

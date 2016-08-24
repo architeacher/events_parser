@@ -15,4 +15,3 @@ func NewFormatter() *Formatter {
 func (self *Formatter) format(context ...Context) interface{} {
 	return context
 }
-

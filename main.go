@@ -1,14 +1,14 @@
 package main
 
 import (
-	"os"
 	"flag"
-	"strconv"
-	"splash/services"
+	"os"
 	"splash/app"
+	"splash/services"
+	"strconv"
 )
 
-func main()  {
+func main() {
 
 	serviceLocator := services.NewLocator()
 	logger := serviceLocator.Logger()
@@ -33,8 +33,7 @@ func main()  {
 	serviceLocator.BlockIndefinitely()
 }
 
-
-func parseConfigs(config *map[string]interface{}) (map[string]map[string]string){
+func parseConfigs(config *map[string]interface{}) map[string]map[string]string {
 
 	baseConfig := map[string]map[string]string{}
 

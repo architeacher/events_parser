@@ -13,9 +13,9 @@ const (
 
 	KEY_TIME string = "time"
 
-	KEY_WEEK string = "week"
-	KEY_YEAR string = "year"
-	KEY_ACTOR string = "actor"
+	KEY_WEEK    string = "week"
+	KEY_YEAR    string = "year"
+	KEY_ACTOR   string = "actor"
 	KEY_SUBJECT string = "subject"
 )
 
@@ -26,13 +26,13 @@ var (
 	isMergeDone chan bool
 	// A channel to serve aggregated data.
 	AggregationQueue chan map[string]int
-	aggregatedData map[string]int
+	aggregatedData   map[string]int
 )
 
 type Aggregator struct {
-	dailyActiveUsers map[string] int
+	dailyActiveUsers       map[string]int
 	top10WeeklyViewedUsers map[string][]string
-	averageUserSession int
+	averageUserSession     int
 }
 
 func NewAggregator() *Aggregator {

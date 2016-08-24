@@ -8,7 +8,7 @@ import (
 type Request struct {
 	headers     map[string]string
 	method      string
-	protocol      string
+	protocol    string
 	host        string
 	path        string
 	body        []byte
@@ -39,19 +39,19 @@ func NewHttpRequest(req *communication.Request) (*Request, error) {
 		}
 	}
 
-	if("" == method){
+	if "" == method {
 		return nil, errors.New("Can not build http request, \"method\" is missing.")
 	}
 
-	if("" == protocol){
+	if "" == protocol {
 		protocol = "http://"
 	}
 
-	if("" == host){
+	if "" == host {
 		return nil, errors.New("Can not build http request, \"host\" is missing.")
 	}
 
-	if("" == path){
+	if "" == path {
 		path = "/"
 	}
 

@@ -2,13 +2,13 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"net/http"
+	"os"
+	"splash/client"
+	"splash/communication"
 	httpProtocol "splash/communication/protocols/http"
 	"splash/services"
-	"splash/client"
-	"os"
-	"splash/communication"
-	"fmt"
 )
 
 func main() {
@@ -19,11 +19,13 @@ func main() {
 
 	flag.Parse()
 
+	// Todo: This should be requested from the server
+	authorizationToken := "a el kalam ya prince el nezam?"
+
 	serviceLocator := services.NewLocator()
 	logger := serviceLocator.Logger()
 
-	client := client.NewClient(httpProtocol.NewProtocol(&http.Transport{
-	}))
+	client := client.NewClient(httpProtocol.NewProtocol(&http.Transport{}))
 
 	data, err := client.LoadCSVFile(filePath)
 
@@ -39,7 +41,7 @@ func main() {
 	go func() {
 		for index, event := range data {
 
-			response, err := client.SendData(&event, host, path)
+			response, err := client.SendData(index, &event, host, path, &authorizationToken)
 
 			if err != nil {
 				fmt.Println(index, len(event), err.Error())

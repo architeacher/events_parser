@@ -1,16 +1,16 @@
 package http
 
 import (
+	"io/ioutil"
+	"net/http"
 	"splash/communication"
 	"strings"
-	"net/http"
-	"io/ioutil"
 )
 
 type Response struct {
-	statusCode int
-	headers map[string]string
-	body string
+	statusCode   int
+	headers      map[string]string
+	body         string
 	baseResponse *communication.Response
 }
 
@@ -35,15 +35,15 @@ func NewHttpResponseFromNative(resp *http.Response) (*Response, error) {
 
 	var isSuccessful bool
 
-	if (200 == resp.StatusCode) {
+	if 200 == resp.StatusCode {
 
 		isSuccessful = true
 	}
 
 	return &Response{
 		statusCode: resp.StatusCode,
-		headers: headers,
-		body: bodyAsString,
+		headers:    headers,
+		body:       bodyAsString,
 		baseResponse: communication.NewResponse(
 			bodyAsString,
 			headers,

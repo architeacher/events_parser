@@ -1,16 +1,16 @@
 package protobuf
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"net/http"
 	"splash/client"
+	httpProtocol "splash/communication/protocols/http"
 	"splash/communication/protocols/protobuf"
 	"strconv"
-	httpProtocol "splash/communication/protocols/http"
-	"net/http"
+	"testing"
 )
 
-func TestShouldBuildPayloadCorrectly (t *testing.T) {
+func TestShouldBuildPayloadCorrectly(t *testing.T) {
 
 	assert := assert.New(t)
 
@@ -47,9 +47,9 @@ func TestShouldBuildPayloadCorrectly (t *testing.T) {
 		assert.Nil(err)
 
 		eventPayload := protobuf.Event_Payload{
-			Time: &time,
+			Time:      &time,
 			EventType: &eventType,
-			ActorId: &actorId,
+			ActorId:   &actorId,
 		}
 
 		if len(eventData) > 3 {
@@ -62,7 +62,7 @@ func TestShouldBuildPayloadCorrectly (t *testing.T) {
 	}
 }
 
-func TestShouldMarshalEventsCorrectly (t *testing.T) {
+func TestShouldMarshalEventsCorrectly(t *testing.T) {
 
 	assert := assert.New(t)
 

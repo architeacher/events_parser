@@ -7,7 +7,7 @@ import (
 
 type Logger struct {
 	baseLogger *baseLogger.Logger
-	formatter *Formatter
+	formatter  *Formatter
 }
 
 type Context interface{}
@@ -30,7 +30,7 @@ func NewLogger() *Logger {
 
 	return &Logger{
 		baseLogger: baseLogger.New(os.Stderr, "", baseLogger.LstdFlags),
-		formatter: NewFormatter(),
+		formatter:  NewFormatter(),
 	}
 }
 

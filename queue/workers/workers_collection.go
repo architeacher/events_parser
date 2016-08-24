@@ -1,25 +1,29 @@
 package workers
 
 import (
-	"sync"
 	"splash/processing/map_reduce"
 	"splash/queue/jobs"
+	"sync"
+)
+
+var (
+	totalReceived uint64 = 0
 )
 
 type Collection struct {
-	workers      []*Worker
-	length       int
-	workersPool  *Pool
-	isGrouped    bool
+	workers     []*Worker
+	length      int
+	workersPool *Pool
+	isGrouped   bool
 }
 
 func NewCollection(workers []*Worker, workersPool *Pool, isGrouped bool) *Collection {
 	return &Collection{
 		workers: workers,
-		length: len(workers),
+		length:  len(workers),
 		// Should workers work as a group.
 		workersPool: workersPool,
-		isGrouped: isGrouped,
+		isGrouped:   isGrouped,
 	}
 }
 
@@ -27,25 +31,23 @@ func (self *Collection) DispatchMappers(tasks chan interface{}, collector map_re
 
 	self.Start()
 
+	defer close(collector)
+
 	// A new job is received.
 	for task := range tasks {
 
-		job := task.(jobs.Job)
+		job := task.(*jobs.Job)
 
 		go func(job jobs.Job) {
-
 			// Blocking till an idle worker is available, then trying to obtain this available worker's job channel,
 			// to send a job request on.
 			jobRequest := <-self.workersPool.GetWorkersPoolChannel()
-
 			// Dispatch the job to the worker job channel.
 			jobRequest <- job
-		}(job)
+		}(*job)
 
 		collector <- self.workersPool.GetOutputChannel()
 	}
-
-	defer close(collector)
 }
 
 func (self *Collection) Start() {
@@ -62,7 +64,7 @@ func (self *Collection) Start() {
 			wg.Add(1)
 		}
 
-		if self.isGrouped{
+		if self.isGrouped {
 			go worker.Start(wg)
 		} else {
 			go worker.Start(nil)
@@ -75,23 +77,18 @@ func (self *Collection) Start() {
 }
 
 func (self *Collection) Pause() {
-
 	for _, worker := range self.workers {
-
 		worker.Pause()
 	}
 }
 
 func (self *Collection) Stop() {
-
 	for _, worker := range self.workers {
-
 		worker.Stop()
 	}
 }
 
 func (self *Collection) Restart() {
-
 	self.Stop()
 	self.Start()
 }

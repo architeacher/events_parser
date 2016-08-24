@@ -3,22 +3,22 @@ package app
 import (
 	"encoding/json"
 	"net/http"
+	"splash/logger"
 	"splash/processing/aggregation"
 	"splash/services"
-	"splash/logger"
 )
 
 type AnalyticsServer struct {
-	config map[string]string
+	config     map[string]string
 	aggregator *aggregation.Aggregator
-	logger *logger.Logger
+	logger     *logger.Logger
 }
 
 func NewAnalyticsServer(config map[string]string, aggregator *aggregation.Aggregator, logger *logger.Logger) *AnalyticsServer {
 	return &AnalyticsServer{
-		config: config,
+		config:     config,
 		aggregator: aggregator,
-		logger: logger,
+		logger:     logger,
 	}
 }
 

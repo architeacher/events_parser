@@ -1,14 +1,22 @@
 package services
 
 import (
-	"io/ioutil"
-	"os"
 	"encoding/json"
+	"io/ioutil"
+	"math/rand"
+	"os"
 	"os/signal"
-	"syscall"
-	"splash/logger"
 	"runtime"
+	"splash/logger"
+	"syscall"
 	"time"
+)
+
+const (
+	letterBytes   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	letterIdxBits = 6                    // 6 bits to represent a letter index
+	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
+	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
 )
 
 type Locator struct {
@@ -31,7 +39,7 @@ func (self *Locator) LoadConfig(configPath *string) (map[string]interface{}, err
 
 	err = json.Unmarshal(file, &config)
 
-	if (nil != err) {
+	if nil != err {
 		return nil, err
 	}
 
@@ -59,6 +67,26 @@ func (*Locator) BlockIndefinitely() {
 
 func (self *Locator) GetAsTimestamp(nanoseconds int64) time.Time {
 	return time.Unix(0, nanoseconds)
+}
+
+var src = rand.NewSource(time.Now().UnixNano())
+
+func (self *Locator) RandString(prefix string, n int) string {
+	b := make([]byte, n)
+	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
+	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
+		if remain == 0 {
+			cache, remain = src.Int63(), letterIdxMax
+		}
+		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
+			b[i] = letterBytes[idx]
+			i--
+		}
+		cache >>= letterIdxBits
+		remain--
+	}
+
+	return prefix + string(b)
 }
 
 func (self *Locator) Stats() {
