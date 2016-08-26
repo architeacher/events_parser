@@ -27,11 +27,9 @@ func NewLocator() *Locator {
 }
 
 func (self *Locator) LoadConfig(configPath *string) (map[string]interface{}, error) {
-
 	file, err := ioutil.ReadFile(*configPath)
 
 	if nil != err {
-
 		return nil, err
 	}
 
@@ -44,7 +42,6 @@ func (self *Locator) LoadConfig(configPath *string) (map[string]interface{}, err
 	}
 
 	return config, nil
-
 }
 
 func (*Locator) Logger() *logger.Logger {
@@ -62,7 +59,7 @@ func (*Locator) BlockIndefinitely() {
 
 	println("Blocking indefinitely...")
 	<-sigc
-	println("Bye Bye!")
+	println("Hasta la vista, baby!")
 }
 
 func (self *Locator) GetAsTimestamp(nanoseconds int64) time.Time {
@@ -90,11 +87,9 @@ func (self *Locator) RandString(prefix string, n int) string {
 }
 
 func (self *Locator) Stats() {
-
 	logger := self.Logger()
 
 	for {
-
 		logger.Info("Number of Go routines:", runtime.NumGoroutine())
 		time.Sleep(3 * time.Second)
 	}

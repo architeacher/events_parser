@@ -53,6 +53,11 @@ func (self *Dispatcher) Run() {
 
 func (self *Dispatcher) dispatch(logger *logger.Logger) {
 
+	self.dispatchWorkers(logger)
+}
+
+func (self *Dispatcher) dispatchWorkers(logger *logger.Logger) {
+
 	workers := make([]*workersLib.Worker, self.maxWorkers)
 	workersPool := workersLib.NewPool(make(chan chan jobs.Job, self.maxWorkers), make(chan interface{}))
 
@@ -63,4 +68,3 @@ func (self *Dispatcher) dispatch(logger *logger.Logger) {
 	workersLib.WorkersCollectionHandler = workersLib.NewCollection(workers, workersPool, false)
 	workersLib.WorkersCollectionHandler.Start()
 }
-
