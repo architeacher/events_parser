@@ -145,14 +145,13 @@ func (self *Client) getRowSize(row []string) int {
 
 	size := 0
 	for _, record := range row {
-
 		size += len(record)
 	}
 
 	return size
 }
 
-func (self *Client) SendData(index int, data *[]byte, host, path, authorizationToken *string) (*communication.Response, error) {
+func (self *Client) SendData(index int, data *[]byte, host, path, authorizationToken *string, patchesCount int) (*communication.Response, error) {
 
 	request := communication.NewRequest(*data, map[string]interface{}{
 		"method":        "Post",
@@ -161,6 +160,7 @@ func (self *Client) SendData(index int, data *[]byte, host, path, authorizationT
 		"path":          *path,
 		"Content-Type":  "application/x-protobuf",
 		"Authorization": *authorizationToken,
+		"Patches-Count": patchesCount,
 		"Patch-Index":   index,
 	})
 

@@ -6,10 +6,8 @@ import (
 	"time"
 )
 
-var (
-	// A buffered channel that we can send work requests on.
-	JobsQueue chan interface{}
-)
+// A buffered channel that we can send work channel requests on.
+type JobsQueue chan interface{}
 
 type Job struct {
 	id    string
@@ -39,14 +37,12 @@ func NewJob(id string, delay time.Duration, created time.Time, payload interface
 	}
 }
 
-func NewJobFromEventPayload(id string, eventPayload *protobuf.Event_Payload, mappers []map_reduce.MapperFunc) *Job {
-
+func NewJobFromEventPayload(id string, eventPayload *protobuf.Event_Payload, delay time.Duration, mappers []map_reduce.MapperFunc) *Job {
 	payload := NewPayloadFromEventPayload(eventPayload)
-	// Todo: delay duration should be configurable.
-	return NewJob(id, 1, time.Now(), payload, mappers)
+	return NewJob(id, delay, time.Now(), payload, mappers)
 }
 
-func (self *Job) Id() string {
+func (self *Job) GetId() string {
 	return self.id
 }
 
@@ -70,7 +66,7 @@ func (self *Job) GetCreated() time.Time {
 func (self *Job) SetFinished(isFinished bool, finished time.Time) *Job {
 	self.finished = finished
 	self.isFinished = isFinished
-	self.GetPatch().SetFinished(self.id)
+	self.GetPatch().SetFinished(self)
 	return self
 }
 
@@ -95,14 +91,16 @@ func (self *Job) GetMappers() []map_reduce.MapperFunc {
 	return self.mappers
 }
 
-func PushToChanel(patch *Patch, JobsQueue chan interface{}) chan interface{} {
+func PopulateChannel(patch *Patch, jobsQueue JobsQueue, shouldClose bool) chan interface{} {
 
-	go func() {
-		for _, work := range *patch.jobs {
-			// Push the work to the queue.
-			JobsQueue <- work
-		}
-	}()
+	for _, work := range *patch.jobs {
+		// Push the work to the queue.
+		jobsQueue <- work
+	}
 
-	return JobsQueue
+	if shouldClose {
+		defer close(jobsQueue)
+	}
+
+	return jobsQueue
 }

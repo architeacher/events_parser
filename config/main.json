@@ -1,7 +1,7 @@
 {
   "servers" : {
     "base": {
-      "maxWorkers": 2,
+      "maxWorkers": 19,
       "maxQueuedItems": 500,
       "host": "localhost",
       "method": "GET",

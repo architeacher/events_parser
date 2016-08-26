@@ -4,14 +4,13 @@ import (
 	"github.com/golang/protobuf/proto"
 	"splash/communication/protocols/protobuf"
 	"splash/processing/map_reduce"
-	"splash/processing/map_reduce/mappers"
 	jobsLib "splash/queue/jobs"
 	"splash/services"
 	"strconv"
 )
 
 // Todo: Remove this tracking
-var Signups, Follows, Creations, Impressions, Total uint64
+var Signups, Follows, Creations, Impressions, Patches, LargestPatch, Total uint64
 
 type Operator struct {
 }
@@ -37,7 +36,7 @@ func (self *Operator) EnumerateData(bodyData []byte) (chan interface{}, error) {
 	return output, nil
 }
 
-func (self *Operator) EnumeratePatch(collection *jobsLib.PatchCollection, input chan interface{}) (*jobsLib.Patch, error) {
+func (self *Operator) EnumeratePatch(input chan interface{}, mappers []map_reduce.MapperFunc) (*jobsLib.Patch, error) {
 
 	jobs := []*jobsLib.Job{}
 
@@ -64,14 +63,12 @@ func (self *Operator) EnumeratePatch(collection *jobsLib.PatchCollection, input 
 				break
 			}
 
-			job := jobsLib.NewJobFromEventPayload(serviceLocator.RandString("job-"+strconv.Itoa(index)+"-", 55), event, []map_reduce.MapperFunc{mappers.Mapper})
+			job := jobsLib.NewJobFromEventPayload(serviceLocator.RandString("job-"+strconv.Itoa(index)+"-", 55), event, 0, mappers)
 			jobs = append(jobs, job)
 		}
 	}
 
-	patch := jobsLib.NewPatch(serviceLocator.RandString("patch-", 55), collection, &jobs)
-
-	collection.Append(patch)
+	patch := jobsLib.NewPatch(serviceLocator.RandString("patch-", 55), &jobs)
 
 	return patch, nil
 }

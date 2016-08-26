@@ -49,50 +49,14 @@ func (self *Worker) Start(waitGroup interface{}) {
 		select {
 		// A job is received, on the worker's channel, and picked up by the worker.
 		case job := <-self.jobRequest:
-
-			time.Sleep(job.GetDelay())
-
-			for _, mapper := range job.GetMappers() {
-				err := mapper(&job, self.workersPool.GetOutputChannel())
-				if err != nil {
-					self.logger.Error("Error processing job:", job.Id(), err.Error())
-				}
-			}
-
-			job.SetFinished(true, time.Now())
-
-			if waitGroup != nil {
-				wg := waitGroup.(sync.WaitGroup)
-				wg.Done()
-			}
+			self.process(&job, waitGroup)
 
 		// Workers will stop working after 24 hours, taking a nap :P
 		//case <-time.After(time.Hour * 24):
 		//	self.Stop()
 
 		case state := <-self.state:
-
-			switch state {
-			case PAUSED:
-				self.logger.Info("Worker", self.id, "is paused.")
-
-			case RUNNING:
-				self.logger.Info("Worker", self.id, "is started.")
-
-			case STOPPED:
-				self.logger.Info("Worker", self.id, "is stopped.")
-				return
-
-			default:
-				// We use runtime.Gosched() to prevent a deadlock in this case.
-				// It will not be needed of work is performed here which yields
-				// to the scheduler.
-				runtime.Gosched()
-
-				if PAUSED == state {
-					break
-				}
-			}
+			self.checkState(state)
 		}
 	}
 
@@ -112,4 +76,46 @@ func (self *Worker) Id() string {
 
 func (self *Worker) setState(status int) {
 	self.state <- status
+}
+
+func (self *Worker) process(job *jobs.Job, waitGroup interface{}) {
+	time.Sleep(job.GetDelay())
+
+	for _, mapper := range job.GetMappers() {
+		err := mapper(job, self.workersPool.GetOutputChannel())
+		if err != nil {
+			self.logger.Error("Error processing job:", job.GetId(), err.Error())
+		}
+	}
+
+	job.SetFinished(true, time.Now())
+
+	if waitGroup != nil {
+		wg := waitGroup.(sync.WaitGroup)
+		wg.Done()
+	}
+}
+
+func (self *Worker) checkState(state int) {
+	switch state {
+	case PAUSED:
+		self.logger.Info("Worker", self.id, "is paused.")
+
+	case RUNNING:
+		self.logger.Info("Worker", self.id, "is started.")
+
+	case STOPPED:
+		self.logger.Info("Worker", self.id, "is stopped.")
+		return
+
+	default:
+		// We use runtime.Gosched() to prevent a deadlock in this case.
+		// It will not be needed of work is performed here which yields
+		// to the scheduler.
+		runtime.Gosched()
+
+		if PAUSED == state {
+			break
+		}
+	}
 }

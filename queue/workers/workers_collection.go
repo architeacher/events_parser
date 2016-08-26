@@ -6,16 +6,16 @@ import (
 	"sync"
 )
 
-var (
-	totalReceived uint64 = 0
-)
-
 type Collection struct {
 	workers     []*Worker
 	length      int
 	workersPool *Pool
 	isGrouped   bool
 }
+
+var (
+	WorkersCollectionHandler *Collection
+)
 
 func NewCollection(workers []*Worker, workersPool *Pool, isGrouped bool) *Collection {
 	return &Collection{
@@ -27,15 +27,12 @@ func NewCollection(workers []*Worker, workersPool *Pool, isGrouped bool) *Collec
 	}
 }
 
-func (self *Collection) DispatchMappers(tasks chan interface{}, collector map_reduce.MapperCollector) {
-
-	self.Start()
+func (self *Collection) DispatchMappers(tasks jobs.JobsQueue, collector map_reduce.MapperCollector) {
 
 	defer close(collector)
 
-	// A new job is received.
+	// A new task is received.
 	for task := range tasks {
-
 		job := task.(*jobs.Job)
 
 		go func(job jobs.Job) {

@@ -20,7 +20,7 @@ func main() {
 	flag.Parse()
 
 	// Todo: This should be requested from the server
-	authorizationToken := "a el kalam ya prince el nezam?"
+	authorizationToken := "princing"
 
 	serviceLocator := services.NewLocator()
 	logger := serviceLocator.Logger()
@@ -28,6 +28,8 @@ func main() {
 	client := client.NewClient(httpProtocol.NewProtocol(&http.Transport{}))
 
 	data, err := client.LoadCSVFile(filePath)
+
+	patchesCount := len(data)
 
 	if err != nil {
 		logger.Error(err.Error())
@@ -41,7 +43,7 @@ func main() {
 	go func() {
 		for index, event := range data {
 
-			response, err := client.SendData(index, &event, host, path, &authorizationToken)
+			response, err := client.SendData(index, &event, host, path, &authorizationToken, patchesCount)
 
 			if err != nil {
 				fmt.Println(index, len(event), err.Error())
@@ -52,9 +54,7 @@ func main() {
 	}()
 
 	for response := range clientResponse {
-
 		if response != nil {
-
 			fmt.Println(response.Body())
 		}
 	}

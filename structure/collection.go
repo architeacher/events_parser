@@ -30,12 +30,6 @@ func (self *Collection) Append(item interface{}) *Collection {
 	return self
 }
 
-func (self *Collection) AppendItems(items []interface{}) *Collection {
-	self.items = append(self.items, items)
-	self.length = uint64(len(self.items))
-	return self
-}
-
 func (self *Collection) GetItems() []interface{} {
 	return self.items
 }

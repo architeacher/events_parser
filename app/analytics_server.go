@@ -45,12 +45,12 @@ func (*AnalyticsServer) respond(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusOK)
 
 	// Locking on Aggregated data
-	dailyActiveUsers := <-aggregation.AggregationQueue
+	dailyActiveUsers := <- aggregation.AggregationQueue
 
 	serviceLocator := services.Locator{}
 	logger := serviceLocator.Logger()
 
-	logger.Info("finally", dailyActiveUsers)
+	logger.Info("finally", dailyActiveUsers[aggregation.TYPE_GROUPING_BY_TIME])
 
 	json.NewEncoder(w).Encode(map[string]interface{}{"dailyActiveUsers": dailyActiveUsers})
 }

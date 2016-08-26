@@ -7,16 +7,14 @@ import (
 
 type Patch struct {
 	id                         string
-	collection                 *PatchCollection
 	jobs                       *[]*Job
 	length, finishedJobsLength uint64
 }
 
-func NewPatch(id string, collection *PatchCollection, jobs *[]*Job) *Patch {
+func NewPatch(id string, jobs *[]*Job) *Patch {
 
 	patch := &Patch{
 		id:         id,
-		collection: collection,
 		jobs:       jobs,
 		length:     uint64(len(*jobs)),
 	}
@@ -36,20 +34,16 @@ func (self *Patch) GetLength() uint64 {
 	return self.length
 }
 
-func (self *Patch) GetCollection() *PatchCollection {
-	return self.collection
-}
+func (self *Patch) SetFinished(job *Job) *Patch {
 
-func (self *Patch) SetFinished(jobId string) {
-
-	if jobId != "" {
-		atomic.AddUint64(&self.finishedJobsLength, 1)
-		runtime.Gosched()
+	if job == nil {
+		return nil
 	}
 
-	if self.IsFinished() {
-		self.GetCollection().SetFinished(self.GetId())
-	}
+	atomic.AddUint64(&self.finishedJobsLength, 1)
+	runtime.Gosched()
+
+	return self
 }
 
 func (self *Patch) GetFinishedLength() uint64 {
@@ -57,5 +51,5 @@ func (self *Patch) GetFinishedLength() uint64 {
 }
 
 func (self *Patch) IsFinished() bool {
-	return self.length == self.finishedJobsLength
+	return self.GetLength() == self.finishedJobsLength
 }
